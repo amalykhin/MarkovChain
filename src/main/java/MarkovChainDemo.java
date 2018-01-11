@@ -21,12 +21,10 @@ public class MarkovChainDemo {
             System.err.println("IO Exception");
         }
 
+        MarkovChain chain = new MarkovChain(str);
 
-        /*chain.entrySet()
-                .stream()
-                .forEach(e -> System.out.println(e.getKey()+" "+e.getValue()));
-                */
-
-
+        System.out.print(chain.nextWord() + " ");
+        while (chain.isInSentence())
+            System.out.print(chain.nextWord() + " ");
     }
 }

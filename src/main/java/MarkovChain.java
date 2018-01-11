@@ -7,16 +7,22 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class MarkovChain {
-    Map<String, Map<String, Double>> chain;
-    Map<String, Double> startingWords;
+    private Map<String, Map<String, Double>> chain;
+    private Map<String, Double> startingWords;
+    private Random rand;
+    private String previousWord;
 
     MarkovChain (String str) {
+        previousWord = null;
+        rand = new Random();
         Document doc = new Document(str);
+        startingWords = new HashMap<>();
+        chain = new HashMap<>();
+
         List<String> words = doc.sentences().stream()
                 .flatMap(s -> s.words().stream())
                 .collect(Collectors.toList());
-        startingWords = new HashMap<>();
-        // Initialize startingWords with starting words (duh), and number of their occurence.
+        // Initialize startingWords with starting words (duh), and number of their occurrence.
         doc.sentences().stream()
                 .map(s -> s.words().get(0))
                 .forEach((String w) -> {
@@ -26,13 +32,10 @@ public class MarkovChain {
         // Compute probabilities for all the starting words.
         for (Map.Entry<String, Double> word : startingWords.entrySet())
             startingWords.compute(word.getKey(), (k, v) -> v/startingWords.values().size());
-        //System.out.println(startingWords);
-        //words.stream().forEach(s -> System.out.println(s));
-        Map<String, Map<String, Double>> chain = new HashMap<>();
+        // Total number of occurrences of pair "prev <some word>" in text.
+        // Helps me to compute the probabilities later.
         Map<String, Double> num = new HashMap<>();
-
-        String prev;
-        prev = null;
+        String prev = null;
         for (String word : words) {
             if (prev == null) {
                 prev = word;
@@ -51,39 +54,46 @@ public class MarkovChain {
             prev = word;
         }
 
+        // Compute probabilities for the chain.
         for (Map.Entry<String, Map<String,Double>> row : chain.entrySet())
             for (String word : row.getValue().keySet())
                 row.getValue().compute(word, (k, v) -> v/num.get(row.getKey()));
     }
 
     String nextWord () {
-        Random rand = new Random();
         String word = "";
         double die;
 
         die = rand.nextDouble();
-        for (Map.Entry<String, Double> entry : startingWords.entrySet())
-            if (die >= entry.getValue())
-                die -= entry.getValue();
-            else {
-                word = entry.getKey();
-                break;
-            }
-        System.out.print(word+" ");
-
-        while (true) {
+        if (previousWord == null) {
             die = rand.nextDouble();
-            for (Map.Entry<String, Double> entry : chain.get(word).entrySet())
+            for (Map.Entry<String, Double> entry : startingWords.entrySet())
                 if (die >= entry.getValue())
                     die -= entry.getValue();
                 else {
                     word = entry.getKey();
                     break;
                 }
-            System.out.print(word+" ");
-            if (word.equals("."))
-                break;
+            previousWord = word;
+            return word;
         }
-        return
+
+        for (Map.Entry<String, Double> entry : chain.get(previousWord).entrySet())
+            if (die >= entry.getValue())
+                die -= entry.getValue();
+            else {
+                word = entry.getKey();
+                break;
+            }
+        if (word.equals("."))
+            previousWord = null;
+        else
+            previousWord = word;
+
+        return word;
+    }
+
+    boolean isInSentence () {
+        return (previousWord == null) ? false : true;
     }
 }
